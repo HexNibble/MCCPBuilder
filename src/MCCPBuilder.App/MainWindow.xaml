@@ -1,0 +1,568 @@
+<Window x:Class="MCCPBuilder.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MCCP Minecraft 定制客户端打包工具" Width="1080" Height="760"
+        MinWidth="860" MinHeight="620" WindowStartupLocation="CenterScreen">
+    <DockPanel Margin="12">
+        <Border DockPanel.Dock="Bottom" BorderBrush="#D6D6D6" BorderThickness="1"
+                CornerRadius="8" Padding="8" Margin="0,10,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="8,0,14,0">
+                    <TextBlock Text="{Binding StatusText}"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding OperationActivity}"
+                               Margin="0,3,0,0"
+                               Foreground="#555555"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <ProgressBar Grid.Row="1"
+                             Height="10"
+                             Margin="8,7,14,0"
+                             Minimum="0"
+                             Maximum="100"
+                             Value="{Binding OperationProgress, Mode=OneWay}"
+                             IsIndeterminate="{Binding IsOperationProgressIndeterminate, Mode=OneWay}"/>
+                <StackPanel Grid.Column="1" Grid.RowSpan="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button Content="新建项目" Click="NewProject_Click"/>
+                    <Button Content="打开项目" Click="OpenProject_Click"/>
+                    <Button Content="保存项目" Click="SaveProject_Click"/>
+                    <Button Content="生成前检查" Click="Preflight_Click"/>
+                    <Button Content="开始打包" Click="Build_Click"/>
+                    <Button Content="取消" Click="Cancel_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TabControl>
+            <TabItem Header="1. 基本信息">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="客户端名称 *" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Project.Basic.ClientName, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="1" Text="客户端版本 *" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Project.Basic.ClientVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="2" Text="启动器版本 *" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1"
+                                 ToolTip="检测到服务器版本更高时，将自动下载并原位升级 Launcher。"
+                                 Text="{Binding Project.Basic.LauncherVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="3" Text="Minecraft 版本" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Project.Basic.MinecraftVersion, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="4" Text="发布者" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Project.Basic.Publisher, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="5" Text="显示名称" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Project.Basic.DisplayName, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="6" Text="软件描述" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="6" Grid.Column="1" Height="80" AcceptsReturn="True" TextWrapping="Wrap"
+                                 Text="{Binding Project.Basic.Description, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="7" Text="启动器标题" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="7" Grid.Column="1" MaxLength="128"
+                                 ToolTip="最终用户看到的 Launcher 窗口标题；留空时使用显示名称或客户端名称。"
+                                 Text="{Binding Project.Basic.LauncherTitle, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="8" Text="启动器背景图片" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="8" Grid.Column="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding Project.Basic.LauncherBackgroundImagePath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="1" Content="选择图片..." Click="BrowseLauncherBackground_Click"/>
+                        </Grid>
+                        <TextBlock Grid.Row="9" Text="输出文件名" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="9" Grid.Column="1" Text="{Binding Project.Basic.OutputFileName, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Grid.Row="10" Text="主程序 EXE 图标" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="10" Grid.Column="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding Project.Basic.ApplicationIconPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="1" Content="选择 .ico..." Click="BrowseApplicationIcon_Click"/>
+                        </Grid>
+                        <TextBlock Grid.Row="11" Text="安装包 EXE 图标" VerticalAlignment="Center"/>
+                        <Grid Grid.Row="11" Grid.Column="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding Project.Basic.InstallerIconPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Column="1" Content="选择 .ico..." Click="BrowseInstallerIcon_Click"/>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="2. 客户端内容">
+                <Grid Margin="18">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text=".minecraft 根目录 *" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Project.Client.SourceDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Grid.Column="2" Content="浏览..." Click="BrowseSource_Click"/>
+                    </Grid>
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="版本隔离目录 *" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Project.Client.VersionDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                        <Button Grid.Column="2" Content="选择版本..." Click="BrowseVersion_Click"/>
+                    </Grid>
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="启动入口（相对路径）" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" Text="{Binding Project.Client.LaunchEntryPath, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                    <Grid Grid.Row="3" Margin="0,10">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <GroupBox Header="包含规则（每行一条）" Margin="0,0,6,0">
+                            <TextBox AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="{Binding IncludeRulesText, UpdateSourceTrigger=PropertyChanged}"/>
+                        </GroupBox>
+                        <GroupBox Grid.Column="1" Header="排除规则（每行一条）" Margin="6,0,0,0">
+                            <TextBox AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="{Binding ExcludeRulesText, UpdateSourceTrigger=PropertyChanged}"/>
+                        </GroupBox>
+                    </Grid>
+                    <WrapPanel Grid.Row="4">
+                        <CheckBox Content="模组" IsChecked="{Binding Project.Client.IncludeMods}" Margin="8"/>
+                        <CheckBox Content="配置" IsChecked="{Binding Project.Client.IncludeConfigs}" Margin="8"/>
+                        <CheckBox Content="资源包" IsChecked="{Binding Project.Client.IncludeResourcePacks}" Margin="8"/>
+                        <CheckBox Content="光影包" IsChecked="{Binding Project.Client.IncludeShaderPacks}" Margin="8"/>
+                        <CheckBox Content="存档（默认关闭）" IsChecked="{Binding Project.Client.IncludeSaves}" Margin="8"/>
+                        <Button Content="扫描文件" Click="Scan_Click"/>
+                    </WrapPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="3. 启动配置">
+                <Grid Margin="18">
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.ColumnSpan="2" Margin="4,4,4,8" TextWrapping="Wrap"
+                               Text="启动参数将从所选版本 JSON、libraries 和项目设置自动生成；不读取、不复制、也不依赖打包电脑上的 BAT。"/>
+                    <Grid Grid.Row="1" Grid.ColumnSpan="2">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="版本 JSON" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" IsReadOnly="True"
+                                 Text="{Binding Project.Client.VersionManifestPath}"/>
+                    </Grid>
+                    <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="140"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="自定义游戏标题" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1" MaxLength="128"
+                                 ToolTip="留空时保持 Minecraft 默认窗口标题；填写后最终 Launcher 会在游戏运行期间持续应用该标题。"
+                                 Text="{Binding Project.Launch.GameWindowTitle, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                    <TextBlock Grid.Row="3" Margin="0,4,6,4" Text="游戏参数（每行一个参数）" FontWeight="SemiBold"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,4,0,4" Text="JVM 参数（每行一个参数）" FontWeight="SemiBold"/>
+                    <TextBox Grid.Row="4" Margin="0,0,6,6" MinHeight="160"
+                             AcceptsReturn="True" AcceptsTab="True"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             Text="{Binding GameArgumentsText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Margin="6,0,0,6" MinHeight="160"
+                             AcceptsReturn="True" AcceptsTab="True"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             Text="{Binding JvmArgumentsText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <WrapPanel Grid.Row="5" Grid.ColumnSpan="2" Margin="0,2">
+                        <TextBlock Text="最小内存(MB)" VerticalAlignment="Center" Margin="4"/>
+                        <TextBox Width="90" Margin="4" Text="{Binding Project.Launch.MinimumMemoryMb}"/>
+                        <TextBlock Text="最大内存(MB)" VerticalAlignment="Center" Margin="4"/>
+                        <TextBox Width="90" Margin="4" Text="{Binding Project.Launch.MaximumMemoryMb}"/>
+                        <CheckBox Content="添加 JVM 预设"
+                                  IsChecked="{Binding Project.Launch.UsePcl2JvmPreset}"
+                                  ToolTip="添加 G1GC、内存回收和 UTF-8/COMPAT 编码参数；最大内存仍使用左侧数值。"
+                                  VerticalAlignment="Center" Margin="12,4"/>
+                        <CheckBox Content="允许用户修改参数" IsChecked="{Binding Project.Launch.AllowUserArguments}"
+                                  VerticalAlignment="Center" Margin="12,4"/>
+                    </WrapPanel>
+                    <WrapPanel Grid.Row="6" Grid.ColumnSpan="2" Margin="0,6,0,0">
+                        <CheckBox x:Name="CustomizeForgeMcpBrandingCheckBox"
+                                  Content="自定义整行 Forge 标识"
+                                  IsChecked="{Binding Project.Launch.CustomizeForgeMcpBranding}"
+                                  VerticalAlignment="Center" Margin="10,0"/>
+                        <TextBlock Text="显示内容" VerticalAlignment="Center"/>
+                        <TextBox Width="300" Margin="6,0"
+                                 MaxLength="48"
+                                 IsEnabled="{Binding IsChecked, ElementName=CustomizeForgeMcpBrandingCheckBox}"
+                                 ToolTip="例如填写 POTATO LIGHT STUDIO，最终只显示这段文字，不保留 MCP 前缀；该功能仅支持 Forge。"
+                                 Text="{Binding Project.Launch.ForgeMcpBrandingText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="可能影响校验 Forge JAR 哈希的反作弊"
+                                   Foreground="#B04020" VerticalAlignment="Center" Margin="8,0"/>
+                    </WrapPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="4-6. 登录 / Java / 安装">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="18">
+                        <GroupBox Header="登录方式" Padding="10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <WrapPanel>
+                                    <CheckBox Content="允许 Microsoft 正版登录" IsChecked="{Binding MicrosoftLoginEnabled}" Margin="8"/>
+                                    <CheckBox Content="允许离线登录" IsChecked="{Binding OfflineLoginEnabled}" Margin="8"/>
+                                    <CheckBox Content="允许标准 Authlib Injector" IsChecked="{Binding AuthlibLoginEnabled}" Margin="8"/>
+                                    <CheckBox Content="允许统一通行证（Nide8Auth）" IsChecked="{Binding ThirdPartyLoginEnabled}" Margin="8"/>
+                                </WrapPanel>
+                                <TextBlock Grid.Row="1" Text="Authlib 显示名称" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="1" Margin="150,4,4,4" IsEnabled="{Binding AuthlibLoginEnabled}"
+                                         Text="{Binding AuthlibDisplayName, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Row="2" Text="Yggdrasil API 根地址" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2" Margin="150,4,4,4" IsEnabled="{Binding AuthlibLoginEnabled}"
+                                         Text="{Binding AuthlibServerUrl, UpdateSourceTrigger=LostFocus}"/>
+                                <TextBlock Grid.Row="3" Text="Authlib Injector Agent" VerticalAlignment="Center"/>
+                                <Grid Grid.Row="3" Margin="150,0,0,0" IsEnabled="{Binding AuthlibLoginEnabled}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding AuthlibAgentPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="1" Content="选择 authlib-injector.jar..." Click="BrowseAuthlibAgent_Click"/>
+                                </Grid>
+                                <TextBlock Grid.Row="4" Text="统一通行证名称" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="4" Margin="150,4,4,4" IsEnabled="{Binding ThirdPartyLoginEnabled}"
+                                         Text="{Binding ThirdPartyDisplayName, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Row="5" Text="认证配置地址" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="5" Margin="150,4,4,4" IsEnabled="{Binding ThirdPartyLoginEnabled}"
+                                         ToolTip="统一通行证认证接口应使用 https://auth.mc-user.com:233/，login.mc-user.com 仅用于网页注册和登录。"
+                                         Text="{Binding ThirdPartyServerUrl, UpdateSourceTrigger=LostFocus}"/>
+                                <TextBlock Grid.Row="6" Text="服务器标识" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="6" Margin="150,4,4,4" IsEnabled="{Binding ThirdPartyLoginEnabled}"
+                                         Text="{Binding UnifiedPassportServerIdentifier, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Row="7" Text="Nide8Auth Agent" VerticalAlignment="Center"/>
+                                <Grid Grid.Row="7" Margin="150,0,0,0" IsEnabled="{Binding ThirdPartyLoginEnabled}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding UnifiedPassportAgentPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="1" Content="选择 nide8auth.jar..." Click="BrowseUnifiedPassportAgent_Click"/>
+                                </Grid>
+                                <TextBlock Grid.Row="8" Text="不得填写 Access Token、密码或 Cookie；BAT 导入会自动替换旧会话参数。"
+                                           Foreground="#B04020" Margin="8"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="自动进入服务器" Padding="10" Margin="0,10,0,0">
+                            <WrapPanel>
+                                <CheckBox x:Name="AutoJoinServerCheckBox"
+                                          Content="启用自动进入服务器"
+                                          IsChecked="{Binding Project.Launch.AutoJoinServer}"
+                                          VerticalAlignment="Center" Margin="8"/>
+                                <TextBlock Text="服务器地址" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                <TextBox Width="300" Margin="6,4"
+                                         IsEnabled="{Binding IsChecked, ElementName=AutoJoinServerCheckBox}"
+                                         ToolTip="填写域名、IPv4或带方括号的IPv6，可选端口，例如 mc.example.com:25565"
+                                         Text="{Binding Project.Launch.ServerAddress, UpdateSourceTrigger=PropertyChanged}"/>
+                            </WrapPanel>
+                        </GroupBox>
+                        <GroupBox Header="启动前自动清理" Padding="10" Margin="0,10,0,0">
+                            <StackPanel>
+                                <WrapPanel>
+                                    <CheckBox Content="清理缓存（包括模组缓存）"
+                                              IsChecked="{Binding Project.Launch.CleanCachesBeforeLaunch}"
+                                              Margin="8"/>
+                                    <CheckBox Content="清理日志"
+                                              IsChecked="{Binding Project.Launch.CleanLogsBeforeLaunch}"
+                                              Margin="8"/>
+                                </WrapPanel>
+                                <TextBlock Margin="8,2,8,4" Foreground="#666666" TextWrapping="Wrap"
+                                           Text="登录成功后、启动 Minecraft 前执行；只清理安装目录内 .minecraft 中的常见缓存和日志，不清理存档、模组、配置、资源包或账号数据。"/>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="Java" Padding="10" Margin="0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="180"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Java 模式" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="强制使用安装包内置 JRE（禁止系统 Java 回退）"
+                                           FontWeight="SemiBold" VerticalAlignment="Center" Margin="6"/>
+                                <TextBlock Grid.Row="1" Text="JRE ZIP 压缩文件 *" VerticalAlignment="Center"/>
+                                <Grid Grid.Row="1" Grid.Column="1">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding Project.Java.JavaArchivePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="1" Content="选择 ZIP..." Click="BrowseJavaArchive_Click"/>
+                                </Grid>
+                                <TextBlock Grid.Row="2" Text="安装后的固定位置" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{}{app}\JAVA\bin\java.exe"
+                                           FontFamily="Consolas" VerticalAlignment="Center" Margin="6"/>
+                                <TextBlock Grid.Row="3" Text="要求版本（最低 / 最高）" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                                    <TextBox Width="80" Text="{Binding Project.Java.MinimumMajorVersion}"/>
+                                    <TextBlock Text="/" VerticalAlignment="Center"/>
+                                    <TextBox Width="80" Text="{Binding Project.Java.MaximumMajorVersion}"/>
+                                    <CheckBox Content="强制版本" IsChecked="{Binding Project.Java.EnforceVersion}" VerticalAlignment="Center" Margin="10"/>
+                                </StackPanel>
+                                <Button Grid.Row="4" Grid.Column="1" HorizontalAlignment="Left" Content="验证 JRE ZIP" Click="DetectJava_Click"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="安装选项" Padding="10">
+                            <StackPanel>
+                                <WrapPanel>
+                                    <CheckBox Content="允许选择安装位置" IsChecked="{Binding Project.Installation.AllowInstallDirectorySelection}" Margin="8"/>
+                                    <CheckBox Content="支持升级" IsChecked="{Binding Project.Installation.SupportUpgrade}" Margin="8"/>
+                                    <CheckBox Content="启动器和 Minecraft 以管理员身份运行"
+                                              IsChecked="{Binding Project.Installation.RunLauncherAsAdministrator}"
+                                              ToolTip="启用后，启动 Launcher 时显示 UAC；由 Launcher 启动的 Java/Minecraft 进程将继承管理员权限。"
+                                              Margin="8"/>
+                                </WrapPanel>
+                                <TextBlock Margin="8,2,8,4" Foreground="#666666" TextWrapping="Wrap"
+                                           Text="安装程序固定以管理员身份运行；是否让日常启动器和 Minecraft 也以管理员身份运行由上方选项决定。桌面快捷方式和开始菜单快捷方式由最终安装程序的用户选择。卸载时固定删除全部安装目录、游戏文件、存档、配置、快捷方式、当前客户端登录信息和卸载注册信息，不提供保留数据选项。"/>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox Header="构建输出" Padding="10"
+                                  Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="独立输出目录 *"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Project.Output.OutputDirectory, UpdateSourceTrigger=PropertyChanged}"/>
+                                <Button Grid.Column="2"
+                                        Content="选择目录..."
+                                        Click="BrowseOutputDirectory_Click"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                           Grid.ColumnSpan="2"
+                                           Margin="4,6,4,0"
+                                           Foreground="#666666"
+                                           TextWrapping="Wrap"
+                                           Text="绝对路径直接使用；相对路径以当前打包器 EXE 所在目录为基准。例如填写 output 时，将输出到 &lt;打包器 EXE 所在目录&gt;\output。"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="安装包编译器" Padding="10" Margin="0,10,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Inno Setup ISCC.exe *" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding Project.Output.InnoCompilerPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                <Button Grid.Column="2" Content="选择 ISCC.exe..."
+                                        Click="BrowseInnoCompiler_Click"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                           Margin="4,6,4,0" Foreground="#666666" TextWrapping="Wrap"
+                                           Text="会自动检测当前用户目录、Program Files 和 PATH；找不到时必须手动选择，避免只生成脚本却没有最终 EXE。"/>
+                            </Grid>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="7. 服务器更新">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="18">
+                        <GroupBox Header="更新服务器" Padding="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                     <RowDefinition Height="Auto"/>
+                                     <RowDefinition Height="Auto"/>
+                                     <RowDefinition Height="Auto"/>
+                                     <RowDefinition Height="Auto"/>
+                                     <RowDefinition Height="Auto"/>
+                                     <RowDefinition Height="Auto"/>
+                                 </Grid.RowDefinitions>
+                                <TextBlock Text="HTTPS 服务器地址 *"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Grid.ColumnSpan="2"
+                                         Text="{Binding Project.Update.ServerBaseUrl, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Row="1" Text="产品标识 *"
+                                           VerticalAlignment="Center"/>
+                                 <TextBox Grid.Row="1" Grid.Column="1"
+                                          Grid.ColumnSpan="2"
+                                          ToolTip="同一个客户端必须一直使用相同标识。"
+                                          Text="{Binding Project.Update.ProductId, UpdateSourceTrigger=PropertyChanged}"/>
+                                 <TextBlock Grid.Row="2"
+                                            Text="下载线程数（1-200）"
+                                            VerticalAlignment="Center"/>
+                                 <StackPanel Grid.Row="2" Grid.Column="1"
+                                             Grid.ColumnSpan="2"
+                                             Orientation="Horizontal">
+                                     <ComboBox Width="100"
+                                               ItemsSource="{Binding DownloadConcurrencyOptions}"
+                                               SelectedItem="{Binding Project.Update.DownloadConcurrency, Mode=TwoWay}"
+                                               ToolTip="客户端更新时同时下载的最大文件数。默认 128；网络或服务器压力较大时可调低。"/>
+                                     <TextBlock Margin="10,0,0,0"
+                                                VerticalAlignment="Center"
+                                                Foreground="#666666"
+                                                Text="最高 200 路并行下载，所有文件仍会校验 SHA-256。"/>
+                                 </StackPanel>
+                                 <TextBlock Grid.Row="3" Text="发布密钥文件 *"
+                                            VerticalAlignment="Center"/>
+                                 <TextBox Grid.Row="3" Grid.Column="1"
+                                          IsReadOnly="True"
+                                          Text="{Binding PublisherKeyPath}"/>
+                                 <Button Grid.Row="3" Grid.Column="2"
+                                         Content="选择密钥文件…"
+                                         Click="BrowsePublisherKey_Click"/>
+                                 <TextBlock Grid.Row="4" Grid.Column="1"
+                                            Grid.ColumnSpan="2" Margin="4,8"
+                                            Foreground="#B04020"
+                                           TextWrapping="Wrap"
+                                           Text="密钥只在内存中用于本次 HTTPS 发布，不会写入项目文件、安装包、Launcher 或日志。密钥必须通过 SSH 从服务器下载。"/>
+                                <StackPanel Grid.Row="5" Grid.Column="1"
+                                            Orientation="Horizontal">
+                                    <Button HorizontalAlignment="Left"
+                                            Padding="18,8"
+                                            Content="发布 Launcher 和 MC 更新"
+                                            Click="PublishServerUpdate_Click"/>
+                                    <Button HorizontalAlignment="Left"
+                                            Margin="10,0,0,0"
+                                            Padding="18,8"
+                                            Content="发布测试更新"
+                                            Click="PublishTestServerUpdate_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="客户端公告与启动控制"
+                                  Padding="12" Margin="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="170"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <WrapPanel Grid.Column="1">
+                                    <CheckBox Content="客户端启动时显示公告"
+                                              IsChecked="{Binding Project.Update.ShowServerNotice}"
+                                              Margin="4,6,18,6"/>
+                                    <CheckBox Content="禁止客户端启动游戏"
+                                              IsChecked="{Binding Project.Update.BlockGameLaunch}"
+                                              Foreground="#B02020"
+                                              FontWeight="SemiBold"
+                                              Margin="4,6"/>
+                                </WrapPanel>
+                                <TextBlock Grid.Row="1" Text="弹窗标题"
+                                           VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="1" Grid.Column="1"
+                                         MaxLength="128"
+                                         Text="{Binding Project.Update.ServerNoticeTitle, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Grid.Row="2" Text="弹窗正文 *"
+                                           VerticalAlignment="Top"
+                                           Margin="0,8,0,0"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
+                                         Height="110" MaxLength="4000"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Text="{Binding Project.Update.ServerNoticeMessage, UpdateSourceTrigger=PropertyChanged}"/>
+                                <StackPanel Grid.Row="3" Grid.Column="1"
+                                            Margin="0,8,0,0">
+                                    <WrapPanel>
+                                        <Button Content="上传/更新正式公告策略"
+                                                HorizontalAlignment="Left"
+                                                Padding="18,8"
+                                                Click="PublishServerPolicy_Click"/>
+                                        <Button Content="上传/更新测试公告策略"
+                                                HorizontalAlignment="Left"
+                                                Margin="10,0,0,0"
+                                                Padding="18,8"
+                                                Click="PublishTestServerPolicy_Click"/>
+                                    </WrapPanel>
+                                    <TextBlock Margin="0,8,0,0"
+                                               Foreground="#666666"
+                                               TextWrapping="Wrap"
+                                               Text="正式与测试策略使用独立产品标识，互不影响。策略上传后立即生效，不需要重新上传整合包。取消两个勾选并再次上传即可清除对应通道的弹窗和启动限制。"/>
+                                </StackPanel>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="待发布文件" Padding="12"
+                                  Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{Binding LatestReleaseArchivePath}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="{Binding LatestTestReleaseArchivePath}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Margin="0,6,0,0"
+                                           Text="{Binding LatestInstallerPath}"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Margin="0,8,0,0"
+                                           Foreground="#666666"
+                                           TextWrapping="Wrap"
+                                           Text="“开始打包”会生成 MC 更新包和轻量启动器安装包。发布前会分别比较服务器上的 Launcher 与 MC 版本；版本相同的部分自动跳过，只上传版本发生变化的部分。客户端优先完成 Launcher 原位升级，然后重新检查并更新 MC。升级不会删除 .minecraft、存档、配置、截图、资源包、光影包或登录信息。"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="8. 检查与日志">
+                <Grid Margin="18">
+                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="2*"/></Grid.RowDefinitions>
+                    <ListView ItemsSource="{Binding CheckResults}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="级别" Width="90" DisplayMemberBinding="{Binding Severity}"/>
+                                <GridViewColumn Header="区域" Width="120" DisplayMemberBinding="{Binding Area}"/>
+                                <GridViewColumn Header="结果" Width="620" DisplayMemberBinding="{Binding Message}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <TextBox Grid.Row="1" Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas" Margin="0,10,0,0"/>
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

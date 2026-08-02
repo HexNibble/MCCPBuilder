@@ -1,0 +1,31 @@
+bin/
+obj/
+.vs/
+output/*
+!output/.gitkeep
+*.user
+*.suo
+TestResults/
+artifacts/
+__pycache__/
+*.pyc
+
+# 本地打包项目、发布密钥与环境配置不得提交
+*.mccpproject
+*.key
+*.pem
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+secrets/
+Secrets/
+/server/mccp-update-key
+
+# 本地运行和服务器运行时数据
+LauncherConfig/*.mccpstate
+LauncherConfig/*.mccptest
+server/data/
+server/releases/
+server/current/

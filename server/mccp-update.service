@@ -1,0 +1,28 @@
+[Unit]
+Description=MCCP Minecraft Update Repository
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mccp-update
+Group=mccp-update
+Environment=MCCP_UPDATE_HOST=127.0.0.1
+Environment=MCCP_UPDATE_PORT=18080
+Environment=MCCP_UPDATE_DATA=/var/lib/mccp-update
+Environment=MCCP_UPDATE_KEY_FILE=/etc/mccp-update/publisher.key
+ExecStart=/usr/bin/python3 /opt/mccp-update-server/mccp_update_server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/mccp-update
+ReadOnlyPaths=/etc/mccp-update/publisher.key
+CapabilityBoundingSet=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target
