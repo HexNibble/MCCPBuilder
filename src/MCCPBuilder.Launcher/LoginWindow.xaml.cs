@@ -260,8 +260,8 @@ public partial class LoginWindow : Window
         if (CanUseSavedLogin())
         {
             HintText.Text =
-                "已找到本机 AES 加密保存的登录信息。点击下方按钮将使用保存的密码重新执行正常认证。";
-            LoginButton.Content = "使用已保存信息登录并启动";
+                "已找到本机 AES 加密保存的登录令牌。启动器会先验证令牌，必要时自动刷新；不会保存密码。";
+            LoginButton.Content = "使用已保存会话登录并启动";
         }
         else
         {
@@ -303,13 +303,7 @@ public partial class LoginWindow : Window
         {
             if (CanUseSavedLogin())
             {
-                var savedPassword = _savedLogin?.Password ?? "";
-                Session = string.IsNullOrEmpty(savedPassword)
-                    ? await TryReuseSavedSessionAsync(provider)
-                    : await AuthenticateYggdrasilAsync(
-                        provider,
-                        _savedLogin!.Username,
-                        savedPassword);
+                Session = await TryReuseSavedSessionAsync(provider);
                 if (Session is null)
                 {
                     _loginStore.Delete();
@@ -320,7 +314,7 @@ public partial class LoginWindow : Window
                     return;
                 }
 
-                PersistLoginChoice(provider, Session, savedPassword);
+                PersistLoginChoice(provider, Session);
                 DialogResult = true;
                 return;
             }
@@ -331,13 +325,12 @@ public partial class LoginWindow : Window
                 return;
             }
 
-            var password = PasswordInput.Password;
             Session = await AuthenticateYggdrasilAsync(
                 provider,
                 username,
-                password);
+                PasswordInput.Password);
             PasswordInput.Clear();
-            PersistLoginChoice(provider, Session, password);
+            PersistLoginChoice(provider, Session);
             DialogResult = true;
         }
         catch (Exception exception)
@@ -612,8 +605,7 @@ public partial class LoginWindow : Window
 
     private void PersistLoginChoice(
         LoginProviderRuntimeConfig provider,
-        LoginSession session,
-        string password = "")
+        LoginSession session)
     {
         if (RememberLoginCheckBox.IsChecked != true)
         {
@@ -646,8 +638,7 @@ public partial class LoginWindow : Window
             session.ClientId,
             session.UserType,
             session.Xuid,
-            DateTimeOffset.UtcNow,
-            password);
+            DateTimeOffset.UtcNow);
         try
         {
             _loginStore.Save(record);

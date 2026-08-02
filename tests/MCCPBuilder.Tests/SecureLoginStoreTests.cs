@@ -9,7 +9,7 @@ public sealed class SecureLoginStoreTests : IDisposable
         Path.Combine(Path.GetTempPath(), "MCCPBuilderTests", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void SaveAndLoad_RoundTripsWithoutPlaintextCredentials()
+    public void SaveAndLoad_RoundTripsTokenOnlyWithoutPlaintextCredentials()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -29,9 +29,8 @@ public sealed class SecureLoginStoreTests : IDisposable
         Assert.Equal(record.ProviderKey, loaded.ProviderKey);
         Assert.Equal(record.Username, loaded.Username);
         Assert.Equal(record.AccessToken, loaded.AccessToken);
-        Assert.Equal(record.Password, loaded.Password);
         using var envelope = System.Text.Json.JsonDocument.Parse(encryptedBytes);
-        Assert.Equal(2, envelope.RootElement.GetProperty("version").GetInt32());
+        Assert.Equal(3, envelope.RootElement.GetProperty("version").GetInt32());
         Assert.True(envelope.RootElement.TryGetProperty("ciphertext", out _));
         Assert.DoesNotContain(
             record.Username,
@@ -42,9 +41,36 @@ public sealed class SecureLoginStoreTests : IDisposable
             Encoding.UTF8.GetString(encryptedBytes),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            record.Password,
+            "password",
             Encoding.UTF8.GetString(encryptedBytes),
-            StringComparison.Ordinal);
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_DeletesVersionTwoRecordThatMayContainPassword()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var store = new SecureLoginStore(@"C:\Games\Client", _temporaryDirectory);
+        Directory.CreateDirectory(Path.GetDirectoryName(store.FilePath)!);
+        File.WriteAllText(
+            store.FilePath,
+            """
+            {
+              "version": 2,
+              "macAddress": "001122334455",
+              "salt": "AAAAAAAAAAAAAAAAAAAAAA==",
+              "nonce": "AAAAAAAAAAAAAAAA",
+              "tag": "AAAAAAAAAAAAAAAAAAAAAA==",
+              "ciphertext": "AA=="
+            }
+            """);
+
+        Assert.Null(store.Load());
+        Assert.False(File.Exists(store.FilePath));
     }
 
     [Fact]
@@ -89,8 +115,7 @@ public sealed class SecureLoginStoreTests : IDisposable
             "client-token",
             "mojang",
             "0",
-            DateTimeOffset.UtcNow,
-            "one-day-password");
+            DateTimeOffset.UtcNow);
 
     public void Dispose()
     {

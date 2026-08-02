@@ -588,7 +588,7 @@
                             </Border>
 
                             <CheckBox x:Name="RememberLoginCheckBox"
-                                      Content="永久保存账号和密码"
+                                      Content="记住账号并保持登录（不保存密码）"
                                       Margin="2,16,0,0"
                                       Click="RememberLogin_Click"/>
 

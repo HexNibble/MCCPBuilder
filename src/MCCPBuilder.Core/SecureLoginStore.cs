@@ -16,22 +16,17 @@ public sealed record SavedLoginRecord(
     string ClientId,
     string UserType,
     string Xuid,
-    DateTimeOffset SavedAtUtc,
-    string Password = "");
+    DateTimeOffset SavedAtUtc);
 
 public sealed class SecureLoginStore
 {
     private const string CurrentProductDirectoryName = "MCCPBuilder";
     private const string LegacyProductDirectoryName = "MCCBuilder";
     private const string CurrentKeyPurpose =
-        "MCCPBuilder.Launcher.SavedLogin.v2|";
-    private const string LegacyKeyPurpose =
-        "MCCBuilder.Launcher.SavedLogin.v2|";
+        "MCCPBuilder.Launcher.SavedLogin.v3|";
     private const string CurrentAssociatedDataPrefix =
-        "MCCPBuilder|AES-256-GCM|";
-    private const string LegacyAssociatedDataPrefix =
-        "MCCBuilder|AES-256-GCM|";
-    private const int CurrentFormatVersion = 2;
+        "MCCPBuilder|AES-256-GCM|v3|";
+    private const int CurrentFormatVersion = 3;
     private const int KeySize = 32;
     private const int SaltSize = 16;
     private const int NonceSize = 12;
@@ -94,7 +89,14 @@ public sealed class SecureLoginStore
                     continue;
                 }
 
-                plaintext = Decrypt(File.ReadAllBytes(candidate));
+                var encryptedBytes = File.ReadAllBytes(candidate);
+                if (IsObsoleteEnvelope(encryptedBytes))
+                {
+                    File.Delete(candidate);
+                    continue;
+                }
+
+                plaintext = Decrypt(encryptedBytes);
                 var record = JsonSerializer.Deserialize<SavedLoginRecord>(
                     plaintext,
                     JsonOptions);
@@ -238,10 +240,8 @@ public sealed class SecureLoginStore
         var nonce = RandomNumberGenerator.GetBytes(NonceSize);
         var tag = new byte[TagSize];
         var ciphertext = new byte[plaintext.Length];
-        var key = DeriveKey(macAddress, salt, legacyPurpose: false);
-        var associatedData = CreateAssociatedData(
-            macAddress,
-            legacyPurpose: false);
+        var key = DeriveKey(macAddress, salt);
+        var associatedData = CreateAssociatedData(macAddress);
         try
         {
             using var aes = new AesGcm(key, TagSize);
@@ -268,20 +268,6 @@ public sealed class SecureLoginStore
 
     private byte[] Decrypt(byte[] encryptedBytes)
     {
-        try
-        {
-            return DecryptCore(encryptedBytes, legacyPurpose: false);
-        }
-        catch (CryptographicException)
-        {
-            return DecryptCore(encryptedBytes, legacyPurpose: true);
-        }
-    }
-
-    private byte[] DecryptCore(
-        byte[] encryptedBytes,
-        bool legacyPurpose)
-    {
         var envelope = JsonSerializer.Deserialize<EncryptedLoginEnvelope>(
                            encryptedBytes,
                            JsonOptions)
@@ -302,13 +288,8 @@ public sealed class SecureLoginStore
         }
 
         var plaintext = new byte[ciphertext.Length];
-        var key = DeriveKey(
-            envelope.MacAddress,
-            salt,
-            legacyPurpose);
-        var associatedData = CreateAssociatedData(
-            envelope.MacAddress,
-            legacyPurpose);
+        var key = DeriveKey(envelope.MacAddress, salt);
+        var associatedData = CreateAssociatedData(envelope.MacAddress);
         try
         {
             using var aes = new AesGcm(key, TagSize);
@@ -333,14 +314,11 @@ public sealed class SecureLoginStore
 
     private byte[] DeriveKey(
         string macAddress,
-        byte[] salt,
-        bool legacyPurpose)
+        byte[] salt)
     {
         var machineIdentifier = GetMachineIdentifier();
         var keyMaterial = Encoding.UTF8.GetBytes(
-            (legacyPurpose
-                ? LegacyKeyPurpose
-                : CurrentKeyPurpose) +
+            CurrentKeyPurpose +
             machineIdentifier + "|" +
             macAddress + "|" +
             _applicationIdentity);
@@ -359,12 +337,19 @@ public sealed class SecureLoginStore
         }
     }
 
-    private byte[] CreateAssociatedData(
-        string macAddress,
-        bool legacyPurpose) =>
+    private byte[] CreateAssociatedData(string macAddress) =>
         Encoding.UTF8.GetBytes(
-            $"{(legacyPurpose ? LegacyAssociatedDataPrefix : CurrentAssociatedDataPrefix)}" +
+            CurrentAssociatedDataPrefix +
             $"{CurrentFormatVersion}|{macAddress}|{_applicationIdentity}");
+
+    private static bool IsObsoleteEnvelope(byte[] encryptedBytes)
+    {
+        using var document = JsonDocument.Parse(encryptedBytes);
+        return document.RootElement.ValueKind == JsonValueKind.Object &&
+               document.RootElement.TryGetProperty("version", out var versionProperty) &&
+               versionProperty.TryGetInt32(out var version) &&
+               version < CurrentFormatVersion;
+    }
 
     private static string GetMachineIdentifier()
     {

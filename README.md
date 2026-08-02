@@ -7,7 +7,7 @@ MCCPBuilder 是面向 Windows 10/11 x64 的 Minecraft 定制客户端打包工�
 - 分层的 WPF、配置模型、核心文件处理和安装包生成项目
 - 新建、保存和打开 `.mccpproject` JSON 项目
 - 基本信息、客户端目录、独立游戏/JVM 参数、登录、Java 与安装选项
-- 登录方式按 Microsoft 正版、离线、标准 Authlib Injector、统一通行证（Nide8Auth）排列并可组合启用；最终用户可选择将账号、密码和会话永久保存在本机 AES-256-GCM 加密文件中，项目与安装包中不包含这些登录数据
+- 登录方式按 Microsoft 正版、离线、标准 Authlib Injector、统一通行证（Nide8Auth）排列并可组合启用；最终用户可选择将账号和可撤销会话令牌保存在本机 AES-256-GCM 加密文件中，密码只用于即时认证且不会写入磁盘，项目与安装包中不包含这些登录数据
 - 从所选 Minecraft/Forge 版本 JSON自动解析 mainClass、libraries、规则和启动参数，不读取或依赖打包电脑上的 BAT
 - 能区分 `.minecraft` 根目录、`versions` 集合目录和具体版本隔离目录
 - 将筛选后的 `versions`、`libraries`、`assets` 等客户端文件复制到独立 Payload 临时目录，成功后原子替换最终输出
@@ -138,7 +138,7 @@ Launcher 在启动 Minecraft 前会读取当前版本隔离目录的 `options.tx
 
 登录区域依次允许勾选 Microsoft 正版、离线、标准 Authlib Injector 和统一通行证。最终 Launcher启动时必须由用户选择登录方式：离线登录必须主动选择并填写游戏名；标准 Authlib和统一通行证通过 HTTPS Yggdrasil即时认证。统一通行证会先 GET服务器ID配置并采用返回的 `apiRoot`，随后调用 `authserver/authenticate`，启动时同时添加 `-javaagent:nide8auth.jar=服务器ID` 与 `-Dnide8auth.client=true`，并提供官方注册页面入口。
 
-最终用户可以勾选“永久保存账号和密码”。Launcher将账号、密码、角色和会话一起写入 `%LocalAppData%\MCCPBuilder\SavedLogins` 下的 AES-256-GCM 加密文件，密钥由本机 Windows `MachineGuid`、MAC 地址、客户端安装路径和随机盐经 PBKDF2-SHA256 派生；不会写入项目、Payload或日志。下次启动优先使用保存的密码重新调用正常 Yggdrasil认证接口，不再依赖 `validate`/`refresh` 才能启动。登录窗口提供“清除已保存的登录信息”按钮，卸载时也会删除当前客户端保存的信息。MachineGuid和 MAC不是秘密，本机管理员仍有能力还原保存的密码，因此该功能只用于用户明确选择的个人电脑。Microsoft OAuth界面仍在后续实现中，不会用离线占位值伪装成正版登录。
+最终用户可以勾选“记住账号并保持登录（不保存密码）”。Launcher只把账号、角色、`accessToken` 和 `clientToken` 写入 `%LocalAppData%\MCCPBuilder\SavedLogins` 下的 AES-256-GCM 加密文件，密码仅在当前认证请求中使用并在请求完成后从界面清除，不会写入项目、Payload、日志或登录存储。下次启动会先调用 Yggdrasil `validate` 验证令牌，失效时调用 `refresh`；只有刷新失败才重新要求用户输入密码。登录窗口提供“清除已保存的登录信息”按钮，卸载时也会删除当前客户端保存的信息。旧版可能含密码的 v2 登录文件会在新版首次读取时直接删除。Microsoft OAuth界面仍在后续实现中，不会用离线占位值伪装成正版登录。
 
 程序会自动从当前用户目录、Program Files 和 PATH 检测官方 Inno Setup 6 的 `ISCC.exe`，也可以在“4-6. 登录 / Java / 安装”的“安装包编译器”区域手动选择。项目 JSON 的 `output.innoCompilerPath` 会保存所选绝对路径，例如：
 
@@ -191,7 +191,7 @@ output/
 
 - 当前环境必须另行安装官方 .NET 8 SDK 才能编译。
 - 已实现 Minecraft 客户端文件复制、内置 JRE 解压、自包含启动器、逐文件清单、完整构建日志、最终安装包与 SHA-256。
-- 离线、标准 Authlib和统一通行证的账号交互、会话获取及本机 AES加密登录信息复用已经实现；Microsoft OAuth仍未实现。
+- 离线、标准 Authlib和统一通行证的账号交互、会话获取及本机 AES加密令牌复用已经实现；启动器会先验证令牌、失效时刷新，刷新失败后才重新要求密码，且不会保存密码。Microsoft OAuth仍未实现。
 - BAT 模式只接受 `echo`、`chcp`、`title`、`cd`、`set`、`pause` 和 Java 启动行；包含 PowerShell、下载器、文件删除等额外命令的脚本会在生成前被拒绝。
 - Inno Setup 6 未安装时不能生成最终 EXE。
 - Windows 10/11 实机安装、升级和卸载尚未进入验收。
@@ -343,6 +343,10 @@ MCCPBuilder 采用 **GNU General Public License v3.0 or later**
 （`GPL-3.0-or-later`）发布。你可以使用、研究、修改和分发本项目，也可以进行
 商业使用；对外分发本项目或其衍生版本时，必须遵守 GPLv3 的源码提供、相同许可、
 版权及变更声明要求。完整条款见 [LICENSE](LICENSE)。
+
+统一通行证（Nide8Auth）等可选第三方服务和组件不属于 MCCPBuilder 的官方服务，
+也不会因本项目采用 GPL-3.0-or-later 而自动获得相同许可。相关归属、密码不落盘规则
+和再分发责任见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 测试项目使用的 Microsoft.NET.Test.Sdk、xUnit、xunit.runner.visualstudio 和
 coverlet.collector 分别采用 MIT 或 Apache-2.0 许可证，均不随本仓库提交构建产物。
