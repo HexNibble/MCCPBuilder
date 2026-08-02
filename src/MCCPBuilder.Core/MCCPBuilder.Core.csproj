@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <EmbedLauncherBuildTemplate Condition="'$(EmbedLauncherBuildTemplate)' == ''">true</EmbedLauncherBuildTemplate>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MCCPBuilder.Models\MCCPBuilder.Models.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="MCCPBuilder.Tests" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(EmbedLauncherBuildTemplate)' == 'true'">
+    <EmbeddedResource Include="..\MCCPBuilder.Launcher\**\*"
+                      Exclude="..\MCCPBuilder.Launcher\bin\**;..\MCCPBuilder.Launcher\obj\**">
+      <LogicalName>MCCPBuilder.LauncherBuildTemplate/MCCPBuilder.Launcher/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\MCCPBuilder.Core\**\*"
+                      Exclude="..\MCCPBuilder.Core\bin\**;..\MCCPBuilder.Core\obj\**">
+      <LogicalName>MCCPBuilder.LauncherBuildTemplate/MCCPBuilder.Core/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\MCCPBuilder.Models\**\*"
+                      Exclude="..\MCCPBuilder.Models\bin\**;..\MCCPBuilder.Models\obj\**">
+      <LogicalName>MCCPBuilder.LauncherBuildTemplate/MCCPBuilder.Models/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\Directory.Build.props">
+      <LogicalName>MCCPBuilder.LauncherBuildTemplate/Directory.Build.props</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

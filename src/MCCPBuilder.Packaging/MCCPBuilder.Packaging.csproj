@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\MCCPBuilder.Models\MCCPBuilder.Models.csproj" />
+    <ProjectReference Include="..\MCCPBuilder.Core\MCCPBuilder.Core.csproj" />
+  </ItemGroup>
+</Project>
