@@ -5,9 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>12</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Version>0.3.0-beta</Version>
     <Authors>light-emitting-diodes and contributors</Authors>
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/light-emitting-diodes/MCCPBuilder</RepositoryUrl>
+    <RepositoryUrl>https://github.com/HexNibble/MCCPBuilder</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>
