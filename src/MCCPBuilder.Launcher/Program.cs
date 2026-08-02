@@ -137,6 +137,11 @@ internal static class Program
                 throw new DirectoryNotFoundException($"游戏工作目录不存在：{workingDirectory}");
             }
 
+            RepairSelectedLanguageAsset(
+                applicationDirectory,
+                ResolveGameDirectory(applicationDirectory, config),
+                null);
+
             var startInfo = HiddenProcessStartInfoFactory.Create(
                 javaExecutable,
                 workingDirectory);
@@ -252,6 +257,11 @@ internal static class Program
             throw new DirectoryNotFoundException($"Minecraft 版本工作目录不存在：{workingDirectory}");
         }
 
+        RepairSelectedLanguageAsset(
+            applicationDirectory,
+            workingDirectory,
+            GetArgumentValue(generated.Arguments, "--assetIndex"));
+
         var startInfo = HiddenProcessStartInfoFactory.Create(
             javaExecutable,
             workingDirectory);
@@ -288,6 +298,11 @@ internal static class Program
         {
             throw new FileNotFoundException("打包后的 BAT 启动文件不存在。", batchPath);
         }
+
+        RepairSelectedLanguageAsset(
+            applicationDirectory,
+            ResolveGameDirectory(applicationDirectory, config),
+            null);
 
         var commandInterpreter = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -562,6 +577,64 @@ internal static class Program
         startInfo.Environment["PATH"] = string.IsNullOrWhiteSpace(inheritedPath)
             ? javaBin
             : javaBin + Path.PathSeparator + inheritedPath;
+    }
+
+    private static void RepairSelectedLanguageAsset(
+        string applicationDirectory,
+        string gameDirectory,
+        string? assetIndexId)
+    {
+        var minecraftDirectory = ResolveInside(
+            applicationDirectory,
+            ".minecraft");
+        WriteLog("正在检查 Minecraft 当前语言所需的官方资源。");
+        var result = new MinecraftAssetRepairService()
+            .EnsureSelectedLanguageAsync(
+                minecraftDirectory,
+                gameDirectory,
+                assetIndexId)
+            .GetAwaiter()
+            .GetResult();
+        WriteLog(result.Diagnostic);
+    }
+
+    private static string ResolveGameDirectory(
+        string applicationDirectory,
+        LauncherRuntimeConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(config.Launch.Entry))
+        {
+            var entry = ResolveInside(
+                applicationDirectory,
+                config.Launch.Entry);
+            var entryDirectory = Path.GetDirectoryName(entry);
+            if (!string.IsNullOrWhiteSpace(entryDirectory) &&
+                Directory.Exists(entryDirectory))
+            {
+                return entryDirectory;
+            }
+        }
+
+        return ResolveInside(
+            applicationDirectory,
+            config.Launch.WorkingDirectory);
+    }
+
+    private static string? GetArgumentValue(
+        IReadOnlyList<string> arguments,
+        string option)
+    {
+        for (var index = 0; index < arguments.Count - 1; index++)
+        {
+            if (arguments[index].Equals(
+                    option,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return arguments[index + 1];
+            }
+        }
+
+        return null;
     }
 
     private static void RunCleanup(

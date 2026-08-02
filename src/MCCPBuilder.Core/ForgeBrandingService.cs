@@ -267,8 +267,10 @@ public sealed class ForgeBrandingService
             EnsureAvailable(classFile, offset, 0);
         }
 
-        throw new InvalidDataException(
-            "当前 Forge BrandingControl.class 中未找到硬编码的 MCP 前缀。");
+        // The desired result is that BrandingControl no longer prepends "MCP ".
+        // A missing recipe therefore means this class was already patched, or this
+        // Forge build does not hard-code that prefix. Keep the operation idempotent.
+        return classFile;
     }
 
     private static void EnsureAvailable(byte[] bytes, int offset, int length)

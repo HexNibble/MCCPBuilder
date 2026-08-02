@@ -42,7 +42,7 @@ MCCPBuilder 是面向 Windows 10/11 x64 的 Minecraft 定制客户端打包工�
 在 PowerShell 中运行：
 
 ```powershell
-git clone https://github.com/light-emitting-diodes/MCCPBuilder.git
+git clone https://github.com/HexNibble/MCCPBuilder.git
 Set-Location .\MCCPBuilder
 pwsh -File .\scripts\build.ps1
 ```
@@ -97,6 +97,12 @@ Forge 客户端可启用“自定义整行 Forge 标识”，把标题界面的 
 删除 `.minecraft`。MC 更新只删除旧清单中由发布者管理且不再需要的文件；
 用户自行增加的文件始终保留。存档、配置、截图、资源包、光影包、服务器列表、
 地图/路径点数据和登录信息被标记为用户数据，目标已存在时不会被服务器版本覆盖。
+
+Launcher 在启动 Minecraft 前会读取当前版本隔离目录的 `options.txt` 和
+`assets/indexes`。如果当前所选语言的 Mojang 资源对象缺失或 SHA-1 不正确，
+会从 `https://resources.download.minecraft.net/` 补齐并校验该文件。这样即使
+原始整合包由第三方启动器管理、没有携带全部官方语言资源，简体中文也不会因
+缺少 `assets/objects` 文件而整体回退到英文。
 
 卸载固定采用彻底清理模式，不提供保留配置或存档选项。卸载器会先调用 Launcher清除当前客户端保存的登录会话与启动日志，再删除桌面和开始菜单快捷方式以及整个安装目录；因此安装目录中的游戏文件、配置、模组和存档都会删除。Inno Setup会同时移除该产品的 Windows卸载注册表项。
 

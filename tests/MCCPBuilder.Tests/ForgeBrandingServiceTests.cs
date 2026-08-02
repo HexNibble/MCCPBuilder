@@ -80,6 +80,69 @@ public sealed class ForgeBrandingServiceTests : IDisposable
         Assert.Equal(untouchedEntryBefore, ReadJarEntry(stagedJar, "example.txt"));
     }
 
+    [Fact]
+    public async Task ApplyAsync_WhenMcpPrefixWasAlreadyRemoved_IsIdempotent()
+    {
+        const string combinedVersion = "1.20.1-47.4.20";
+        var sourceMinecraft = Path.Combine(_temporaryDirectory, "source", ".minecraft");
+        var versionDirectory = Path.Combine(sourceMinecraft, "versions", "测试版本");
+        Directory.CreateDirectory(versionDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(versionDirectory, "forge.json"),
+            """
+            {
+              "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
+              "arguments": {
+                "game": [
+                  "--fml.forgeVersion", "47.4.20",
+                  "--fml.mcVersion", "1.20.1",
+                  "--fml.mcpVersion", "20230612.114412"
+                ]
+              }
+            }
+            """);
+
+        var stagedPayload = Path.Combine(_temporaryDirectory, "payload");
+        var stagedJar = Path.Combine(
+            stagedPayload,
+            ".minecraft",
+            "libraries",
+            "net",
+            "minecraftforge",
+            "forge",
+            combinedVersion,
+            $"forge-{combinedVersion}-universal.jar");
+        CreateForgeJar(stagedJar, "20230612.114412");
+        var project = new ProjectConfig
+        {
+            Client = new()
+            {
+                SourceDirectory = sourceMinecraft,
+                MinecraftRootDirectory = sourceMinecraft,
+                VersionDirectory = versionDirectory,
+                VersionManifestPath = Path.Combine("versions", "测试版本", "forge.json")
+            },
+            Launch = new()
+            {
+                CustomizeForgeMcpBranding = true,
+                ForgeMcpBrandingText = "第一次处理"
+            }
+        };
+        var service = new ForgeBrandingService();
+
+        await service.ApplyAsync(project, stagedPayload);
+        project.Launch.ForgeMcpBrandingText = "第二次处理";
+        await service.ApplyAsync(project, stagedPayload);
+
+        var manifest = ReadJarEntry(stagedJar, "META-INF/MANIFEST.MF");
+        Assert.Contains("Implementation-Version: 第二次处理", manifest);
+        Assert.DoesNotContain("Implementation-Version: 第一次处理", manifest);
+        var brandingClass = ReadJarEntryBytes(
+            stagedJar,
+            "net/minecraftforge/internal/BrandingControl.class");
+        Assert.False(ContainsSequence(brandingClass, "MCP \u0001"u8));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
