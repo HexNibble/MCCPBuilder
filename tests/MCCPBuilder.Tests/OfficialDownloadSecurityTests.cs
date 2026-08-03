@@ -1,4 +1,5 @@
 using MCCPBuilder.Core;
+using System.Text.Json;
 
 namespace MCCPBuilder.Tests;
 
@@ -62,5 +63,66 @@ public sealed class OfficialDownloadSecurityTests
             OfficialGameInstallService.CreateForgeUniversalUri(
                 minecraftRoot,
                 jar));
+    }
+
+    [Fact]
+    public void ForgeInstallerPlan_RecognizesRuntimeLibrariesAndOfficialInstaller()
+    {
+        using var manifest = JsonDocument.Parse("""
+        {
+          "arguments": {
+            "game": [
+              "--launchTarget", "forgeclient",
+              "--fml.forgeVersion", "47.4.20",
+              "--fml.mcVersion", "1.20.1",
+              "--fml.mcpVersion", "20230612.114412"
+            ]
+          }
+        }
+        """);
+
+        var plan = OfficialGameInstallService.CreateForgeInstallerPlan(
+            manifest.RootElement,
+            Path.Combine("C:\\Games", ".minecraft"));
+
+        Assert.NotNull(plan);
+        Assert.Equal(
+            "https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.4.20/forge-1.20.1-47.4.20-installer.jar",
+            plan.InstallerUri.AbsoluteUri);
+        Assert.Equal(4, plan.RequiredFiles.Count);
+        Assert.Contains(plan.RequiredFiles, item => item.RelativePath.EndsWith(
+            "client-1.20.1-20230612.114412-slim.jar",
+            StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(plan.RequiredFiles, item => item.RelativePath.EndsWith(
+            "client-1.20.1-20230612.114412-extra.jar",
+            StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(plan.RequiredFiles, item => item.RelativePath.EndsWith(
+            "client-1.20.1-20230612.114412-srg.jar",
+            StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(plan.RequiredFiles, item => item.RelativePath.EndsWith(
+            "forge-1.20.1-47.4.20-client.jar",
+            StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ForgeInstallerPlan_RejectsUnsafeVersionIdentifier()
+    {
+        using var manifest = JsonDocument.Parse("""
+        {
+          "arguments": {
+            "game": [
+              "--launchTarget", "forgeclient",
+              "--fml.forgeVersion", "../47.4.20",
+              "--fml.mcVersion", "1.20.1",
+              "--fml.mcpVersion", "20230612.114412"
+            ]
+          }
+        }
+        """);
+
+        Assert.Throws<InvalidDataException>(() =>
+            OfficialGameInstallService.CreateForgeInstallerPlan(
+                manifest.RootElement,
+                Path.Combine("C:\\Games", ".minecraft")));
     }
 }

@@ -9,15 +9,18 @@ public partial class OfficialGameInstallWindow : Window
     private readonly string _applicationDirectory;
     private readonly OfficialGameRuntimeConfig _config;
     private readonly ResourceRuntimeConfig _resources;
+    private readonly string _javaExecutable;
 
     internal OfficialGameInstallWindow(
         string applicationDirectory,
         OfficialGameRuntimeConfig config,
-        ResourceRuntimeConfig resources)
+        ResourceRuntimeConfig resources,
+        string javaExecutable)
     {
         _applicationDirectory = applicationDirectory;
         _config = config;
         _resources = resources;
+        _javaExecutable = javaExecutable;
         InitializeComponent();
         Loaded += LoadedAsync;
     }
@@ -32,11 +35,14 @@ public partial class OfficialGameInstallWindow : Window
             var progress = new Progress<OfficialGameInstallProgress>(value =>
             {
                 ActivityText.Text = value.Activity;
-                CountText.Text = value.TotalFiles <= 0
+                var isIndeterminate = value.IsIndeterminate ||
+                                      value.TotalFiles <= 0 ||
+                                      (value.TotalFiles == 1 && value.CompletedFiles == 0);
+                CountText.Text = isIndeterminate
                     ? "处理中"
                     : $"{value.CompletedFiles} / {value.TotalFiles}";
-                InstallProgress.IsIndeterminate = value.TotalFiles <= 0;
-                InstallProgress.Value = value.TotalFiles <= 0
+                InstallProgress.IsIndeterminate = isIndeterminate;
+                InstallProgress.Value = isIndeterminate
                     ? 0
                     : value.CompletedFiles * 100d / value.TotalFiles;
             });
@@ -52,7 +58,8 @@ public partial class OfficialGameInstallWindow : Window
                         _config.DownloadConcurrency,
                         _config.ForgeBranding.Enabled,
                         _config.ForgeBranding.Jar,
-                        _config.ForgeBranding.Text),
+                        _config.ForgeBranding.Text,
+                        _javaExecutable),
                     progress);
             }
             if (!_resources.Delivery.Equals("CustomServer", StringComparison.OrdinalIgnoreCase))

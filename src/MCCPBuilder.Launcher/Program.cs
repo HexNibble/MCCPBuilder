@@ -88,7 +88,8 @@ internal static class Program
                 EnsureOfficialGameInstalled(
                     applicationDirectory,
                     config.OfficialGame,
-                    config.Resources);
+                    config.Resources,
+                    javaExecutable);
             }
 
             if (args.Contains("--run-generated", StringComparer.OrdinalIgnoreCase))
@@ -407,7 +408,8 @@ internal static class Program
     private static void EnsureOfficialGameInstalled(
         string applicationDirectory,
         OfficialGameRuntimeConfig config,
-        ResourceRuntimeConfig resources)
+        ResourceRuntimeConfig resources,
+        string javaExecutable)
     {
         if (Application.Current is null)
         {
@@ -416,7 +418,8 @@ internal static class Program
         var window = new OfficialGameInstallWindow(
             applicationDirectory,
             config,
-            resources);
+            resources,
+            javaExecutable);
         _ = window.ShowDialog();
         if (window.Failure is not null)
         {
