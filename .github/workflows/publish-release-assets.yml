@@ -1,0 +1,95 @@
+name: Publish release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag
+        required: true
+        default: v0.1.2-beta
+
+permissions:
+  contents: write
+
+jobs:
+  publish-windows-assets:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore MCCPBuilder.sln
+
+      - name: Test
+        run: dotnet test MCCPBuilder.sln -c Release --no-restore
+
+      - name: Publish builder and launcher
+        shell: pwsh
+        run: |
+          dotnet publish src/MCCPBuilder.App/MCCPBuilder.App.csproj -c Release --no-restore -o artifacts/release/builder
+          dotnet publish src/MCCPBuilder.Launcher/MCCPBuilder.Launcher.csproj -c Release --no-restore -o artifacts/release/launcher
+
+          New-Item -ItemType Directory -Path artifacts/release/upload -Force | Out-Null
+          Copy-Item artifacts/release/builder/MCCPBuilder.App.exe "artifacts/release/upload/MCCPBuilder.App-$env:RELEASE_TAG.exe"
+          Copy-Item artifacts/release/launcher/Launcher.exe artifacts/release/upload/Launcher.exe
+
+          foreach ($file in @(
+            "artifacts/release/upload/MCCPBuilder.App-$env:RELEASE_TAG.exe",
+            'artifacts/release/upload/Launcher.exe'
+          )) {
+            $stream = [IO.File]::OpenRead($file)
+            try {
+              if ($stream.ReadByte() -ne 77 -or $stream.ReadByte() -ne 90) {
+                throw "Not a valid Windows PE executable: $file"
+              }
+            }
+            finally {
+              $stream.Dispose()
+            }
+          }
+
+      - name: Download existing server assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts/release/server -Force | Out-Null
+          gh release download $env:RELEASE_TAG `
+            --pattern 'MCCPBuilder-Server-*.zip' `
+            --pattern 'mccp-server-install.sh' `
+            --dir artifacts/release/server
+
+      - name: Generate release checksums
+        shell: pwsh
+        run: |
+          $builder = Get-Item "artifacts/release/upload/MCCPBuilder.App-$env:RELEASE_TAG.exe"
+          $launcher = Get-Item 'artifacts/release/upload/Launcher.exe'
+          $serverZip = Get-Item 'artifacts/release/server/MCCPBuilder-Server-*.zip'
+          $install = Get-Item 'artifacts/release/server/mccp-server-install.sh'
+          $files = @($builder, $launcher, $serverZip, $install)
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+            "$hash  $($file.Name)"
+          }
+          [IO.File]::WriteAllLines(
+            "artifacts/release/upload/MCCPBuilder-$env:RELEASE_TAG-SHA256.txt",
+            $lines,
+            [Text.UTF8Encoding]::new($false))
+
+      - name: Upload executable assets to draft release
+        shell: pwsh
+        run: |
+          gh release upload $env:RELEASE_TAG `
+            "artifacts/release/upload/MCCPBuilder.App-$env:RELEASE_TAG.exe" `
+            'artifacts/release/upload/Launcher.exe' `
+            "artifacts/release/upload/MCCPBuilder-$env:RELEASE_TAG-SHA256.txt" `
+            --clobber
