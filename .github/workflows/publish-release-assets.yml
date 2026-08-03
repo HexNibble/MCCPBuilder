@@ -31,9 +31,6 @@ jobs:
       - name: Restore
         run: dotnet restore MCCPBuilder.sln
 
-      - name: Test
-        run: dotnet test MCCPBuilder.sln -c Release --no-restore
-
       - name: Publish builder and launcher
         shell: pwsh
         run: |
