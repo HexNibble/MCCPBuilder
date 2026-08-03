@@ -10,11 +10,12 @@ MCCPBuilder 是面向 Windows 10/11 x64 的 Minecraft 定制客户端打包工�
 - 登录方式按 Microsoft 正版、离线、标准 Authlib Injector、统一通行证（Nide8Auth）排列并可组合启用；最终用户可选择将账号和可撤销会话令牌保存在本机 AES-256-GCM 加密文件中，密码只用于即时认证且不会写入磁盘，项目与安装包中不包含这些登录数据
 - 从所选 Minecraft/Forge 版本 JSON自动解析 mainClass、libraries、规则和启动参数，不读取或依赖打包电脑上的 BAT
 - 能区分 `.minecraft` 根目录、`versions` 集合目录和具体版本隔离目录
-- Minecraft、assets、原版 libraries 与 Forge 运行库不进入服务器发布包；Launcher 首次运行时按所选版本 JSON 从 Mojang/Forge 官方 HTTPS 地址下载并校验
+- Minecraft、assets、原版 libraries、所选版本主 JAR/主 JSON 与 natives 不进入服务器发布包；Launcher 首次运行时按所选版本 JSON 从 Mojang/Forge 官方 HTTPS 地址下载并校验。所选版本目录中的额外组件（例如 `dac-agent.jar`）不会被当作主游戏文件误删
 - 模组、材质包和光影包可独立选择 Modrinth `.mrpack`、CurseForge 整合包 ZIP，或随 MCCP 指定更新服务器发布
 - Minecraft 内容固定保留在 `ClientPayload\.minecraft` 下，不再把 `versions`、`libraries`、`assets` 铺到软件根目录
 - 安全保留未被排除的空目录（例如运行时需要写入本地库的 `版本名-natives`），跳过符号链接和重解析点
 - 包含/排除通配符规则与默认隐私排除规则
+- 生成前解析自定义 JVM 参数中的 `-javaagent`、`-java` 和 `-jar` 文件引用；文件缺失、使用不可移植绝对路径或不会进入最终 Payload 时直接禁止打包
 - 异步目录扫描、取消、敏感登录文件检测
 - 选择 JRE ZIP，并检查 Java 主版本、x64 架构和关键运行文件
 - 安全解压 JRE，自动剥离单一顶层目录并规范化为 `ClientPayload\JAVA`

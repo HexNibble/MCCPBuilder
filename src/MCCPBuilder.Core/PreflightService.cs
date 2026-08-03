@@ -242,6 +242,14 @@ public sealed class PreflightService(FileScanService fileScanner, JavaDetectionS
         foreach (var file in scan.IncludedFiles.Where(file => Path.Combine(project.Client.SourceDirectory, file.RelativePath).Length >= 240))
             results.Add(new(CheckSeverity.Warning, "路径", $"路径可能过长：{file.RelativePath}"));
 
+        foreach (var diagnostic in JvmFileReferenceValidator.Validate(project, scan))
+        {
+            results.Add(new(
+                CheckSeverity.Error,
+                "JVM 文件",
+                diagnostic));
+        }
+
         if (!string.IsNullOrWhiteSpace(project.Client.LaunchEntryPath))
         {
             var entryPath = Path.GetFullPath(Path.Combine(project.Client.SourceDirectory, project.Client.LaunchEntryPath));

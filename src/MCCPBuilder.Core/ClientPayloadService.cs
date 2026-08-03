@@ -118,11 +118,7 @@ public sealed class ClientPayloadService(FileScanService scanner)
     {
         var normalized = relativePath.Replace('\\', '/').Trim('/');
         if (options.DownloadMinecraftAndForgeFromOfficialSources &&
-            (normalized.Equals("assets", StringComparison.OrdinalIgnoreCase) ||
-             normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
-             normalized.Equals("libraries", StringComparison.OrdinalIgnoreCase) ||
-             normalized.StartsWith("libraries/", StringComparison.OrdinalIgnoreCase) ||
-             normalized.Contains("-natives", StringComparison.OrdinalIgnoreCase)))
+            IsOfficialManagedGameDirectory(options, normalized))
         {
             return true;
         }
@@ -161,7 +157,7 @@ public sealed class ClientPayloadService(FileScanService scanner)
     {
         var normalized = relativePath.Replace('\\', '/').TrimStart('/');
         if (options.DownloadMinecraftAndForgeFromOfficialSources &&
-            IsOfficialManagedGameFile(normalized))
+            IsOfficialManagedGameFile(options, normalized))
         {
             return false;
         }
@@ -175,7 +171,9 @@ public sealed class ClientPayloadService(FileScanService scanner)
         return true;
     }
 
-    private static bool IsOfficialManagedGameFile(string relativePath)
+    private static bool IsOfficialManagedGameFile(
+        ClientContentOptions options,
+        string relativePath)
     {
         if (relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
             relativePath.StartsWith("libraries/", StringComparison.OrdinalIgnoreCase))
@@ -183,28 +181,142 @@ public sealed class ClientPayloadService(FileScanService scanner)
             return true;
         }
 
-        if (!relativePath.StartsWith("versions/", StringComparison.OrdinalIgnoreCase))
+        var selectedVersion = GetSelectedVersionRelativePath(options);
+        if (selectedVersion is null ||
+            (!relativePath.Equals(selectedVersion, StringComparison.OrdinalIgnoreCase) &&
+             !relativePath.StartsWith(selectedVersion + "/", StringComparison.OrdinalIgnoreCase)))
         {
             return false;
         }
 
-        var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length < 3)
+        if (IsSelectedVersionNativePath(options, relativePath))
         {
             return true;
         }
 
-        var versionRelative = string.Join('/', segments.Skip(2));
-        if (versionRelative.Contains("-natives/", StringComparison.OrdinalIgnoreCase) ||
-            versionRelative.StartsWith("natives/", StringComparison.OrdinalIgnoreCase))
+        var launchEntry = NormalizeRelativePath(options.LaunchEntryPath);
+        if (!string.IsNullOrEmpty(launchEntry) &&
+            relativePath.Equals(launchEntry, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        return !versionRelative.Contains('/') &&
-               (versionRelative.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) ||
-                versionRelative.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+        var manifest = GetVersionManifestRelativePath(options);
+        if (manifest is not null &&
+            relativePath.Equals(manifest, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var versionName = Path.GetFileName(
+            Path.TrimEndingDirectorySeparator(options.VersionDirectory));
+        return relativePath.Equals(
+                   $"{selectedVersion}/{versionName}.jar",
+                   StringComparison.OrdinalIgnoreCase) ||
+               relativePath.Equals(
+                   $"{selectedVersion}/{versionName}.json",
+                   StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsOfficialManagedGameDirectory(
+        ClientContentOptions options,
+        string relativePath)
+    {
+        if (relativePath.Equals("assets", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.Equals("libraries", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.StartsWith("libraries/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsSelectedVersionNativePath(options, relativePath);
+    }
+
+    private static bool IsSelectedVersionNativePath(
+        ClientContentOptions options,
+        string relativePath)
+    {
+        var selectedVersion = GetSelectedVersionRelativePath(options);
+        if (selectedVersion is null ||
+            !relativePath.StartsWith(selectedVersion + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var versionName = Path.GetFileName(
+            Path.TrimEndingDirectorySeparator(options.VersionDirectory));
+        var versionRelative = relativePath[(selectedVersion.Length + 1)..];
+        var firstSegment = versionRelative.Split('/', 2)[0];
+        return firstSegment.Equals("natives", StringComparison.OrdinalIgnoreCase) ||
+               firstSegment.Equals(
+                   versionName + "-natives",
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? GetSelectedVersionRelativePath(
+        ClientContentOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.SourceDirectory) ||
+            string.IsNullOrWhiteSpace(options.VersionDirectory))
+        {
+            return null;
+        }
+
+        try
+        {
+            var sourceRoot = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(options.SourceDirectory));
+            var selectedVersion = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(options.VersionDirectory));
+            if (!InputValidator.IsPathInside(sourceRoot, selectedVersion))
+            {
+                return null;
+            }
+
+            return NormalizeRelativePath(
+                Path.GetRelativePath(sourceRoot, selectedVersion));
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
+    private static string? GetVersionManifestRelativePath(
+        ClientContentOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(options.SourceDirectory) ||
+            string.IsNullOrWhiteSpace(options.MinecraftRootDirectory) ||
+            string.IsNullOrWhiteSpace(options.VersionManifestPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var sourceRoot = Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(options.SourceDirectory));
+            var manifest = Path.GetFullPath(Path.Combine(
+                options.MinecraftRootDirectory,
+                options.VersionManifestPath));
+            if (!InputValidator.IsPathInside(sourceRoot, manifest))
+            {
+                return null;
+            }
+
+            return NormalizeRelativePath(Path.GetRelativePath(sourceRoot, manifest));
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
+    private static string NormalizeRelativePath(string? path) =>
+        (path ?? "").Replace('\\', '/').Trim('/');
 
     private static bool IsProviderManagedResource(string relativePath)
     {

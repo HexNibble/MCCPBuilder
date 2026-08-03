@@ -327,7 +327,7 @@ public sealed class MinecraftLaunchProfileService
         return value;
     }
 
-    private static IReadOnlyList<string> TokenizeCommandLine(string value)
+    internal static IReadOnlyList<string> TokenizeCommandLine(string value)
     {
         var result = new List<string>();
         var current = new StringBuilder();

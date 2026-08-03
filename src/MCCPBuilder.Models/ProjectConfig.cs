@@ -5,7 +5,7 @@ public sealed class ProjectConfig
     public string FormatVersion { get; set; } = "1.0";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset LastModifiedAt { get; set; } = DateTimeOffset.UtcNow;
-    public string ApplicationVersion { get; set; } = "0.1.0";
+    public string ApplicationVersion { get; set; } = "0.1.1";
     public BasicInfo Basic { get; set; } = new();
     public ClientContentOptions Client { get; set; } = new();
     public LaunchOptions Launch { get; set; } = new();

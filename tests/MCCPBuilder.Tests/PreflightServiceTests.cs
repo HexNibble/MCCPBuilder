@@ -6,6 +6,64 @@ namespace MCCPBuilder.Tests;
 public sealed class PreflightServiceTests
 {
     [Fact]
+    public async Task Check_BlocksBuildWhenJavaAgentFileIsMissing()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "MCCPBuilderMissingAgentPreflight",
+            Guid.NewGuid().ToString("N"));
+        var version = Path.Combine(root, "versions", "测试版本");
+        Directory.CreateDirectory(version);
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(version, "测试版本.jar"),
+                "client");
+            await File.WriteAllTextAsync(
+                Path.Combine(version, "测试版本.json"),
+                "{\"mainClass\":\"example.Main\",\"arguments\":{\"jvm\":[],\"game\":[]}}");
+            var project = new ProjectConfig
+            {
+                Basic = new()
+                {
+                    ClientName = "Client",
+                    ClientVersion = "1.0.0",
+                    LauncherVersion = "1.0.0",
+                    OutputFileName = "Setup"
+                },
+                Client = new()
+                {
+                    SourceDirectory = root,
+                    MinecraftRootDirectory = root,
+                    VersionDirectory = version,
+                    VersionManifestPath = @"versions\测试版本\测试版本.json",
+                    LaunchEntryPath = @"versions\测试版本\测试版本.jar",
+                    IncludeRules = ["**/*"],
+                    ExcludeRules = []
+                },
+                Launch = new()
+                {
+                    JvmArguments = ["-javaagent:missing-agent.jar"]
+                }
+            };
+            var service = new PreflightService(
+                new FileScanService(),
+                new JavaDetectionService());
+
+            var results = await service.CheckAsync(project);
+
+            Assert.Contains(results, result =>
+                result.Severity == CheckSeverity.Error &&
+                result.Area == "JVM 文件" &&
+                result.Message.Contains("missing-agent.jar", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task Check_ReportsMissingSourceDirectory()
     {
         var project = new ProjectConfig

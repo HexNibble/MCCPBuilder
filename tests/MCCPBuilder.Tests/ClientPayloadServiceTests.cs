@@ -65,8 +65,11 @@ public sealed class ClientPayloadServiceTests : IDisposable
         var source = Path.Combine(_temporaryDirectory, "official", ".minecraft");
         WriteFile(source, @"versions\最后防线\最后防线.jar", "mojang client");
         WriteFile(source, @"versions\最后防线\最后防线.json", "manifest");
+        WriteFile(source, @"versions\最后防线\dac-agent.jar", "anti-cheat agent");
+        WriteFile(source, @"versions\最后防线\anti-cheat.json", "anti-cheat config");
         WriteFile(source, @"versions\最后防线\config\client.toml", "config");
         WriteFile(source, @"versions\最后防线\mods\custom.jar", "mod");
+        WriteFile(source, @"versions\最后防线\最后防线-natives\native.dll", "native");
         WriteFile(source, @"libraries\example\library.jar", "library");
         WriteFile(source, @"assets\indexes\5.json", "assets");
         var staging = Path.Combine(_temporaryDirectory, "official-output", ".tmp");
@@ -84,9 +87,13 @@ public sealed class ClientPayloadServiceTests : IDisposable
         var result = await new ClientPayloadService(new FileScanService())
             .CopyClientAsync(options, staging);
 
-        Assert.Equal(2, result.FileCount);
+        Assert.Equal(4, result.FileCount);
         Assert.False(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "最后防线.jar")));
+        Assert.False(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "最后防线.json")));
+        Assert.False(Directory.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "最后防线-natives")));
         Assert.False(Directory.Exists(Path.Combine(staging, ".minecraft", "libraries", "example")));
+        Assert.True(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "dac-agent.jar")));
+        Assert.True(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "anti-cheat.json")));
         Assert.True(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "config", "client.toml")));
         Assert.True(File.Exists(Path.Combine(staging, ".minecraft", "versions", "最后防线", "mods", "custom.jar")));
     }
